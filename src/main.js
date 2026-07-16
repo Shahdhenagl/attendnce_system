@@ -1157,6 +1157,12 @@ function formatTime(date) {
 // ----------------------------------------------------
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Load saved theme preference
+  const savedTheme = localStorage.getItem('att_theme') || 'dark';
+  if (savedTheme === 'light') {
+    document.body.classList.add('light-mode');
+  }
+
   // Security State & Variables
   let lastAuthorizedRole = store.currentRole;
   let lastAuthorizedEmployeeId = store.currentEmployeeId;
@@ -1584,6 +1590,21 @@ document.addEventListener('DOMContentLoaded', () => {
     loginPage.style.display = 'flex';
     populateLoginDropdown();
     showToast("تم تسجيل الخروج بنجاح.", "info");
+    playTone('success');
+  });
+
+  // Theme Toggle Button
+  document.getElementById('btn-theme-toggle').addEventListener('click', () => {
+    const body = document.body;
+    body.classList.toggle('light-mode');
+    
+    if (body.classList.contains('light-mode')) {
+      localStorage.setItem('att_theme', 'light');
+      showToast("تم التحويل للوضع المضيء (Light Mode)", "info");
+    } else {
+      localStorage.setItem('att_theme', 'dark');
+      showToast("تم التحويل للوضع الداكن (Dark Mode)", "info");
+    }
     playTone('success');
   });
 
