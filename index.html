@@ -151,6 +151,10 @@
             <div class="logs-section">
               <div class="section-title-bar">
                 <h3>📅 سجل الحضور والغياب</h3>
+                <div class="logs-filter-row" style="margin-top: 8px;">
+                  <label for="emp-log-filter-month">تصفية بالشهر:</label>
+                  <input type="month" id="emp-log-filter-month" class="form-input" style="max-width: 150px;">
+                </div>
               </div>
               <div class="logs-list" id="emp-logs-list">
                 <!-- Dynamically generated logs -->
@@ -252,8 +256,8 @@
             <!-- TAB 2: History Logs -->
             <div id="admin-panel-logs" class="admin-tab-content">
               <div class="logs-filter-row">
-                <label for="admin-log-filter-date">التاريخ:</label>
-                <input type="date" id="admin-log-filter-date" class="form-input">
+                <label for="admin-log-filter-month">الشهر:</label>
+                <input type="month" id="admin-log-filter-month" class="form-input">
               </div>
               <div class="admin-logs-list" id="admin-logs-list-container">
                 <!-- Admin view of all employee logs -->

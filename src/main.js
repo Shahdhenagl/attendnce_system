@@ -932,8 +932,15 @@ function renderEmployeeDashboard() {
   const logsContainer = document.getElementById('emp-logs-list');
   logsContainer.innerHTML = '';
 
+  const filterMonthInput = document.getElementById('emp-log-filter-month');
+  if (!filterMonthInput.value) {
+    const today = new Date(store.simulatedTime);
+    filterMonthInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  }
+  const filterMonth = filterMonthInput.value;
+
   const personalLogs = store.attendance
-    .filter(a => a.employeeId === empId)
+    .filter(a => a.employeeId === empId && a.date.startsWith(filterMonth))
     .sort((a,b) => new Date(b.date) - new Date(a.date));
 
   if (personalLogs.length === 0) {
@@ -1117,13 +1124,16 @@ function renderAdminDashboard() {
   const logsListContainer = document.getElementById('admin-logs-list-container');
   logsListContainer.innerHTML = '';
   
-  const filterDateInput = document.getElementById('admin-log-filter-date');
-  if (!filterDateInput.value) {
-    filterDateInput.value = todayStr;
+  const filterMonthInput = document.getElementById('admin-log-filter-month');
+  if (!filterMonthInput.value) {
+    const today = new Date(store.simulatedTime);
+    filterMonthInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
   }
-  const filterDate = filterDateInput.value;
+  const filterMonth = filterMonthInput.value;
   
-  const filteredLogs = store.attendance.filter(a => a.date === filterDate);
+  const filteredLogs = store.attendance
+    .filter(a => a.date.startsWith(filterMonth))
+    .sort((a,b) => new Date(b.date) - new Date(a.date));
   
   if (filteredLogs.length === 0) {
     logsListContainer.innerHTML = '<div class="empty-state">لا يوجد أي سجلات حضور لهذا اليوم.</div>';
@@ -1403,8 +1413,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Admin Logs Date Filter
-  document.getElementById('admin-log-filter-date').addEventListener('change', () => {
+  // Filter listeners
+  document.getElementById('emp-log-filter-month').addEventListener('change', () => {
+    renderApp();
+  });
+  
+  document.getElementById('admin-log-filter-month').addEventListener('change', () => {
     renderAdminDashboard();
   });
 
