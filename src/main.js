@@ -186,13 +186,14 @@ class AppStore {
     });
     this.attendance = JSON.parse(localStorage.getItem('att_attendance')) || DEFAULT_ATTENDANCE;
     const oldUrl = "https://script.google.com/macros/s/AKfycbz6RxHI933MEMp2bt-TCacbh3NgUL8ldbEuvp-L8dNM-bIqkROL855jaES8s64ohRB0_g/exec";
-    const newUrl = "https://script.google.com/macros/s/AKfycbwZN1aT_TSh-xKQaU1DUvpwjvEOUKHkYPOhsQVUKLariBz-oGIRAgB4XzEzX1IXwdTOMw/exec";
+    const oldUrl2 = "https://script.google.com/macros/s/AKfycbwZN1aT_TSh-xKQaU1DUvpwjvEOUKHkYPOhsQVUKLariBz-oGIRAgB4XzEzX1IXwdTOMw/exec";
+    const newUrl = "https://script.google.com/macros/s/AKfycbwf6kW9OzZ67jergGlIxyIhrShApXi-_aF3kvQXShvdnNfFEPLRDIMlhqHIni7GxeyI2A/exec";
 
     this.settings = JSON.parse(localStorage.getItem('att_settings')) || {
       roundInterval: "random", // "10", "20", "30", "50", "random"
       googleSheetsUrl: newUrl
     };
-    if (!this.settings.googleSheetsUrl || this.settings.googleSheetsUrl === oldUrl) {
+    if (!this.settings.googleSheetsUrl || this.settings.googleSheetsUrl === oldUrl || this.settings.googleSheetsUrl === oldUrl2) {
       this.settings.googleSheetsUrl = newUrl;
     }
     
