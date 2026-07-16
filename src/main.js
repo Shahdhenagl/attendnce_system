@@ -102,7 +102,8 @@ const DEFAULT_EMPLOYEES = [
     vacationBalance: 21,
     vacationsUsed: 3,
     role: "remote",
-    avatar: "شن"
+    avatar: "شن",
+    password: "shahd123"
   },
   {
     id: "emp-2",
@@ -113,7 +114,8 @@ const DEFAULT_EMPLOYEES = [
     vacationBalance: 15,
     vacationsUsed: 2,
     role: "remote",
-    avatar: "أح"
+    avatar: "أح",
+    password: "ahmed123"
   },
   {
     id: "emp-3",
@@ -124,7 +126,8 @@ const DEFAULT_EMPLOYEES = [
     vacationBalance: 30,
     vacationsUsed: 5,
     role: "remote",
-    avatar: "نم"
+    avatar: "نم",
+    password: "noha123"
   }
 ];
 
@@ -172,6 +175,15 @@ class AppStore {
 
   load() {
     this.employees = JSON.parse(localStorage.getItem('att_employees')) || DEFAULT_EMPLOYEES;
+    // Ensure all employees have passwords (backward compatibility)
+    this.employees.forEach(emp => {
+      if (!emp.password) {
+        if (emp.id === 'emp-1') emp.password = 'shahd123';
+        else if (emp.id === 'emp-2') emp.password = 'ahmed123';
+        else if (emp.id === 'emp-3') emp.password = 'noha123';
+        else emp.password = '12345';
+      }
+    });
     this.attendance = JSON.parse(localStorage.getItem('att_attendance')) || DEFAULT_ATTENDANCE;
     this.settings = JSON.parse(localStorage.getItem('att_settings')) || {
       roundInterval: "random", // "10", "20", "30", "50", "random"
@@ -633,7 +645,7 @@ function processAutoCheckOutCheck() {
 // 8. Admin Management Actions
 // ----------------------------------------------------
 
-function addEmployee(name, email, startHour, endHour, vacationBalance) {
+function addEmployee(name, email, startHour, endHour, vacationBalance, password) {
   const newEmp = {
     id: "emp-" + Date.now(),
     name: name,
@@ -643,7 +655,8 @@ function addEmployee(name, email, startHour, endHour, vacationBalance) {
     vacationBalance: parseInt(vacationBalance),
     vacationsUsed: 0,
     role: "remote",
-    avatar: name.split(' ').map(n => n[0]).join('').substr(0, 2)
+    avatar: name.split(' ').map(n => n[0]).join('').substr(0, 2),
+    password: password || "12345"
   };
   
   store.employees.push(newEmp);
@@ -1131,21 +1144,134 @@ function formatTime(date) {
 // ----------------------------------------------------
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Bind top simulator panel selectors
+  // Security State & Variables
+  let lastAuthorizedRole = store.currentRole;
+  let lastAuthorizedEmployeeId = store.currentEmployeeId;
+  let pendingRoleChange = null;
+
   const roleSelect = document.getElementById('role-select');
   roleSelect.value = store.currentRole;
+  
+  const empSelect = document.getElementById('active-employee-select');
+  empSelect.value = store.currentEmployeeId;
+
+  // Intercept role changes for authentication
   roleSelect.addEventListener('change', (e) => {
-    store.currentRole = e.target.value;
-    store.save();
-    renderApp();
+    const targetRole = e.target.value;
+    if (targetRole === 'admin') {
+      showLoginModal("admin", null);
+    } else {
+      const selectedEmpId = empSelect.value;
+      showLoginModal("employee", selectedEmpId);
+    }
   });
 
-  const empSelect = document.getElementById('active-employee-select');
   empSelect.addEventListener('change', (e) => {
-    store.currentEmployeeId = e.target.value;
-    store.save();
-    renderApp();
+    const selectedEmpId = e.target.value;
+    showLoginModal("employee", selectedEmpId);
   });
+
+  // Login Modal Handling functions
+  function showLoginModal(role, employeeId) {
+    pendingRoleChange = { role, employeeId };
+    
+    // Customize text
+    const titleEl = document.getElementById('login-title');
+    const subtitleEl = document.getElementById('login-subtitle');
+    const passInput = document.getElementById('login-password-input');
+    
+    passInput.value = '';
+    
+    if (role === 'admin') {
+      titleEl.innerText = "🔐 تسجيل دخول المدير (Admin)";
+      subtitleEl.innerText = "يرجى إدخال كلمة مرور الإدارة للمتابعة";
+    } else {
+      const emp = store.employees.find(e => e.id === employeeId);
+      const empName = emp ? emp.name : "الموظف";
+      titleEl.innerText = `🔐 دخول الموظف: ${empName}`;
+      subtitleEl.innerText = "يرجى إدخال كلمة المرور الفريدة الخاصة بك";
+    }
+    
+    document.getElementById('login-popup-overlay').classList.remove('hidden');
+    
+    // Temporarily reset select boxes visual selection until authorized
+    roleSelect.value = lastAuthorizedRole;
+    empSelect.value = lastAuthorizedEmployeeId;
+    
+    passInput.focus();
+  }
+
+  function hideLoginModal() {
+    document.getElementById('login-popup-overlay').classList.add('hidden');
+    document.getElementById('login-password-input').value = '';
+    pendingRoleChange = null;
+  }
+
+  // Bind Login Buttons
+  document.getElementById('btn-login-cancel').addEventListener('click', () => {
+    hideLoginModal();
+    // Keep visual selectors unchanged
+    roleSelect.value = lastAuthorizedRole;
+    empSelect.value = lastAuthorizedEmployeeId;
+  });
+
+  document.getElementById('btn-login-submit').addEventListener('click', () => {
+    processLogin();
+  });
+
+  // Enter key press in password input triggers login
+  document.getElementById('login-password-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      processLogin();
+    }
+  });
+
+  function processLogin() {
+    const enteredPass = document.getElementById('login-password-input').value.trim();
+    
+    if (!pendingRoleChange) return;
+
+    if (pendingRoleChange.role === 'admin') {
+      if (enteredPass === '123456789') {
+        store.currentRole = 'admin';
+        store.save();
+        lastAuthorizedRole = 'admin';
+        
+        // Update visual select
+        roleSelect.value = 'admin';
+        
+        showToast("مرحباً بك يا مدير النظام! تم الدخول بنجاح.", "success");
+        playTone('success');
+        hideLoginModal();
+        renderApp();
+      } else {
+        showToast("رمز مرور الإدارة غير صحيح! حاول مجدداً.", "danger");
+        playTone('danger');
+      }
+    } else {
+      const emp = store.employees.find(e => e.id === pendingRoleChange.employeeId);
+      if (emp && enteredPass === emp.password) {
+        store.currentRole = 'employee';
+        store.currentEmployeeId = pendingRoleChange.employeeId;
+        store.save();
+        
+        lastAuthorizedRole = 'employee';
+        lastAuthorizedEmployeeId = pendingRoleChange.employeeId;
+        
+        // Update visual selects
+        roleSelect.value = 'employee';
+        empSelect.value = pendingRoleChange.employeeId;
+        
+        showToast(`مرحباً بك ${emp.name}! تم تسجيل الدخول بنجاح.`, "success");
+        playTone('success');
+        hideLoginModal();
+        renderApp();
+      } else {
+        showToast("كلمة مرور الموظف غير صحيحة! حاول مجدداً.", "danger");
+        playTone('danger');
+      }
+    }
+  }
 
   // Time speed simulation binding
   document.getElementById('btn-speed-normal').addEventListener('click', (e) => {
@@ -1260,8 +1386,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const start = document.getElementById('new-emp-start').value;
     const end = document.getElementById('new-emp-end').value;
     const vacation = document.getElementById('new-emp-vacation').value;
+    const password = document.getElementById('new-emp-password').value;
     
-    addEmployee(name, email, start, end, vacation);
+    addEmployee(name, email, start, end, vacation, password);
     
     // Reset form & go back to employees tab
     e.target.reset();
