@@ -144,7 +144,11 @@ class AppStore {
     this.attendance = JSON.parse(localStorage.getItem('att_attendance')) || DEFAULT_ATTENDANCE;
     this.settings = JSON.parse(localStorage.getItem('att_settings')) || {
       roundInterval: "random", // "10", "20", "30", "50", "random"
+      googleSheetsUrl: ""
     };
+    if (!this.settings.googleSheetsUrl) {
+      this.settings.googleSheetsUrl = "";
+    }
     
     // Time states
     this.simTimeSpeed = parseInt(localStorage.getItem('att_simTimeSpeed')) || 1;
@@ -263,6 +267,42 @@ function showToast(message, type = 'success') {
   }, 5000);
 }
 
+// Google Sheets Synchronization
+function syncToGoogleSheets(action, employeeId, details, workedHours = 0, snoozeHours = 0) {
+  const url = store.settings.googleSheetsUrl;
+  if (!url) return;
+
+  const emp = store.employees.find(e => e.id === employeeId);
+  const empName = emp ? emp.name : "غير معروف";
+  const empEmail = emp ? emp.email : "";
+
+  const payload = {
+    employeeName: empName,
+    employeeEmail: empEmail,
+    date: getTodayString(),
+    simTime: new Date(store.simulatedTime).toLocaleTimeString('ar-EG', { hour12: false }),
+    action: action, // "Check-in", "Check-out", "Missed-Check", "Absence", "Connection-Test"
+    details: details,
+    workedHours: workedHours,
+    snoozeHours: snoozeHours
+  };
+
+  fetch(url, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  })
+  .then(() => {
+    console.log("Synced to Google Sheets successfully:", payload);
+  })
+  .catch(err => {
+    console.error("Failed to sync to Google Sheets:", err);
+  });
+}
+
 // ----------------------------------------------------
 // 5. Shift & Attendance Operations
 // ----------------------------------------------------
@@ -321,6 +361,7 @@ function checkIn(employeeId) {
   store.lastValidationTime[employeeId] = store.simulatedTime;
   
   store.save();
+  syncToGoogleSheets("تسجيل حضور (Check-in)", employeeId, status === "Late" ? `متأخر بـ ${lateMinutes} دقيقة` : "في الموعد المحدد", 0, 0);
   renderApp();
 }
 
@@ -365,9 +406,11 @@ function checkOut(employeeId, isAuto = false) {
   
   if (isAuto) {
     showToast(`⏱️ انتهى الدوام لـ ${emp.name}! تم تسجيل الانصراف التلقائي (صافي العمل: ${log.workedHours} س).`, "info");
+    syncToGoogleSheets("انصراف تلقائي (Auto Check-out)", employeeId, `انتهى الدوام تلقائياً (صافي العمل: ${log.workedHours} س)`, log.workedHours, log.snoozeHours);
   } else {
     showToast(`تم تسجيل الانصراف بنجاح. صافي ساعات العمل المحسوبة: ${log.workedHours} ساعة.`, "success");
     playTone('success');
+    syncToGoogleSheets("تسجيل انصراف (Check-out)", employeeId, `تم تسجيل الانصراف بنجاح (صافي العمل: ${log.workedHours} س)`, log.workedHours, log.snoozeHours);
   }
   
   renderApp();
@@ -477,6 +520,7 @@ function handlePresenceTimeout(employeeId) {
       log.snoozeHours = parseFloat((log.snoozeHours + snoozeHours).toFixed(2));
       showToast(`💤 لم يستجب الموظف ${emp.name} خلال 10 ثوانٍ! احتساب ${elapsedMinutes} دقيقة وقت غفوة وخصمها من الساعات.`, "danger");
       playTone('danger');
+      syncToGoogleSheets("غفوة خصم (Missed Presence Check)", employeeId, `لم يستجب للفحص خلال 10 ثوانٍ (خصم: ${elapsedMinutes} د)`, 0, snoozeHours);
     }
     
     // Update validation reference to the missed check time
@@ -633,6 +677,7 @@ function recordAbsence(employeeId, type) {
   }
   
   store.save();
+  syncToGoogleSheets(type === 'paid-vacation' ? "إجازة مدفوعة الأجر" : "غياب غير مدفوع الأجر", employeeId, type === 'paid-vacation' ? "تم تسجيل إجازة مدفوعة الأجر تخصم من الرصيد" : "تم تسجيل يوم غياب بدون أجر", type === 'paid-vacation' ? 8.0 : 0.0, 0.0);
   renderApp();
 }
 
@@ -1203,6 +1248,25 @@ document.addEventListener('DOMContentLoaded', () => {
       if (val !== null && val !== "") {
         updateVacationBalance(empId, val);
       }
+    }
+  });
+
+  // Google Sheets integration bindings
+  const sheetsUrlInput = document.getElementById('admin-sheets-url');
+  if (sheetsUrlInput) {
+    sheetsUrlInput.value = store.settings.googleSheetsUrl || '';
+  }
+  
+  document.getElementById('btn-save-sheets-url').addEventListener('click', () => {
+    const urlInput = document.getElementById('admin-sheets-url').value.trim();
+    store.settings.googleSheetsUrl = urlInput;
+    store.save();
+    showToast("تم حفظ رابط Google Sheets بنجاح!", "success");
+    playTone('success');
+    
+    if (urlInput) {
+      showToast("جاري إرسال فحص اتصال تجريبي للمزامنة...", "info");
+      syncToGoogleSheets("فحص اتصال تجريبي (Connection-Test)", "emp-1", "فحص توافق النظام والربط مع جوجل شيت", 0, 0);
     }
   });
 

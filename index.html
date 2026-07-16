@@ -216,6 +216,18 @@
               </div>
             </div>
 
+            <!-- Google Sheets Integration Card -->
+            <div class="card config-card" style="margin-top: 12px;">
+              <h3>📊 ربط البيانات بـ Google Sheets</h3>
+              <p class="card-desc">أدخل رابط Web App الخاص بـ Apps Script لجوجل شيت ليتم مزامنة سجلات الحضور والانصراف والغفوات تلقائياً في نفس اللحظة.</p>
+              <div class="form-group">
+                <label for="admin-sheets-url">رابط Web App (Apps Script):</label>
+                <input type="url" id="admin-sheets-url" placeholder="https://script.google.com/macros/s/.../exec" class="form-input" style="font-family: var(--font-english); direction: ltr;">
+              </div>
+              <button id="btn-save-sheets-url" class="btn btn-success btn-full">💾 حفظ وإجراء فحص اتصال</button>
+            </div>
+
+
             <!-- Tab Switcher inside Admin -->
             <div class="admin-tabs">
               <button class="admin-tab-btn active" data-target="admin-panel-employees">👥 الموظفين</button>
