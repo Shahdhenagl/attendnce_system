@@ -144,10 +144,10 @@ class AppStore {
     this.attendance = JSON.parse(localStorage.getItem('att_attendance')) || DEFAULT_ATTENDANCE;
     this.settings = JSON.parse(localStorage.getItem('att_settings')) || {
       roundInterval: "random", // "10", "20", "30", "50", "random"
-      googleSheetsUrl: ""
+      googleSheetsUrl: "https://script.google.com/macros/s/AKfycbz6RxHI933MEMp2bt-TCacbh3NgUL8ldbEuvp-L8dNM-bIqkROL855jaES8s64ohRB0_g/exec"
     };
     if (!this.settings.googleSheetsUrl) {
-      this.settings.googleSheetsUrl = "";
+      this.settings.googleSheetsUrl = "https://script.google.com/macros/s/AKfycbz6RxHI933MEMp2bt-TCacbh3NgUL8ldbEuvp-L8dNM-bIqkROL855jaES8s64ohRB0_g/exec";
     }
     
     // Time states
