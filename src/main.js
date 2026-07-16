@@ -1,5 +1,36 @@
 // State & Core Logic for Attendance and Presence Verification System
 
+// Request native desktop notification permissions on load
+if (typeof window !== "undefined" && "Notification" in window) {
+  if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+    Notification.requestPermission();
+  }
+}
+
+// Send native laptop notifications
+function sendNativeNotification(title, body) {
+  if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+    const notification = new Notification(title, {
+      body: body,
+      icon: "https://cdn-icons-png.flaticon.com/512/564/564793.png",
+      requireInteraction: true
+    });
+    
+    notification.onclick = function() {
+      window.focus();
+      const roleSelect = document.getElementById('role-select');
+      if (roleSelect) {
+        roleSelect.value = "employee";
+        roleSelect.dispatchEvent(new Event('change'));
+      }
+    };
+    
+    setTimeout(() => {
+      notification.close();
+    }, 10000);
+  }
+}
+
 // ----------------------------------------------------
 // 1. Audio Synthesizer (Web Audio API)
 // ----------------------------------------------------
@@ -240,7 +271,11 @@ function updateClocks() {
   // Update UI Elements
   document.getElementById('sim-date').innerText = dateString;
   document.getElementById('sim-clock').innerText = clockString;
-  document.getElementById('phone-os-time').innerText = shortClockString;
+  
+  const phoneTime = document.getElementById('phone-os-time');
+  if (phoneTime) {
+    phoneTime.innerText = shortClockString;
+  }
   
   // Live ticker updates for checked-in employee duration
   updateEmployeeLiveStats();
@@ -481,6 +516,12 @@ function createPresenceCheck(employeeId, source = 'manual') {
   if (store.currentRole === 'admin' || store.currentEmployeeId !== employeeId) {
     showToast(`طلب إثبات تواجد للموظف: ${empName}. أمامه 10 ثوانٍ للرد!`, "warning");
   }
+  
+  // Send native desktop notification to the laptop
+  sendNativeNotification(
+    `🚨 إثبات حضور للموظف: ${empName}`,
+    `أمامك 10 ثوانٍ لتأكيد تواجدك بالضغط هنا لتفادي الخصم من الساعات!`
+  );
   
   store.save();
   
