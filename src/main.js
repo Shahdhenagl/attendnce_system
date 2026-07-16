@@ -645,6 +645,18 @@ function processAutoCheckOutCheck() {
 // 8. Admin Management Actions
 // ----------------------------------------------------
 
+function populateLoginDropdown() {
+  const select = document.getElementById('login-select-emp');
+  if (!select) return;
+  select.innerHTML = '';
+  store.employees.forEach(emp => {
+    const opt = document.createElement('option');
+    opt.value = emp.id;
+    opt.innerText = emp.name;
+    select.appendChild(opt);
+  });
+}
+
 function addEmployee(name, email, startHour, endHour, vacationBalance, password) {
   const newEmp = {
     id: "emp-" + Date.now(),
@@ -662,6 +674,7 @@ function addEmployee(name, email, startHour, endHour, vacationBalance, password)
   store.employees.push(newEmp);
   store.save();
   showToast(`تمت إضافة الموظف الجديد: ${name}`, "success");
+  populateLoginDropdown();
   renderApp();
 }
 
@@ -1436,6 +1449,142 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast("جاري إرسال فحص اتصال تجريبي للمزامنة...", "info");
       syncToGoogleSheets("فحص اتصال تجريبي (Connection-Test)", "emp-1", "فحص توافق النظام والربط مع جوجل شيت", 0, 0);
     }
+  });
+
+  // 12. Full-Screen Login Page Handlers
+  const loginPage = document.getElementById('login-page');
+  
+  // Populate dropdown on startup
+  populateLoginDropdown();
+
+  // Check sessionStorage for active login session
+  const isLoggedIn = sessionStorage.getItem('att_loggedIn') === 'true';
+  if (isLoggedIn) {
+    store.currentRole = sessionStorage.getItem('att_role') || 'admin';
+    store.currentEmployeeId = sessionStorage.getItem('att_employeeId') || 'emp-1';
+    loginPage.style.display = 'none';
+  } else {
+    loginPage.style.display = 'flex';
+  }
+
+  // Bind Login Tab Buttons
+  const tabBtnEmp = document.getElementById('tab-btn-emp');
+  const tabBtnAdmin = document.getElementById('tab-btn-admin');
+  const loginFormEmp = document.getElementById('login-form-employee');
+  const loginFormAdmin = document.getElementById('login-form-admin');
+
+  tabBtnEmp.addEventListener('click', () => {
+    tabBtnEmp.classList.add('active');
+    tabBtnEmp.style.background = 'var(--bg-card)';
+    tabBtnEmp.style.border = '1px solid var(--border-light)';
+    tabBtnEmp.style.color = 'var(--text-main)';
+
+    tabBtnAdmin.classList.remove('active');
+    tabBtnAdmin.style.background = 'transparent';
+    tabBtnAdmin.style.border = 'none';
+    tabBtnAdmin.style.color = 'var(--text-secondary)';
+
+    loginFormEmp.style.display = 'flex';
+    loginFormAdmin.style.display = 'none';
+  });
+
+  tabBtnAdmin.addEventListener('click', () => {
+    tabBtnAdmin.classList.add('active');
+    tabBtnAdmin.style.background = 'var(--bg-card)';
+    tabBtnAdmin.style.border = '1px solid var(--border-light)';
+    tabBtnAdmin.style.color = 'var(--text-main)';
+
+    tabBtnEmp.classList.remove('active');
+    tabBtnEmp.style.background = 'transparent';
+    tabBtnEmp.style.border = 'none';
+    tabBtnEmp.style.color = 'var(--text-secondary)';
+
+    loginFormAdmin.style.display = 'flex';
+    loginFormEmp.style.display = 'none';
+  });
+
+  // Employee Login Form Submit
+  document.getElementById('btn-submit-emp-login').addEventListener('click', () => {
+    const selectedEmpId = document.getElementById('login-select-emp').value;
+    const enteredPass = document.getElementById('login-pass-emp').value.trim();
+    const emp = store.employees.find(e => e.id === selectedEmpId);
+
+    if (emp && enteredPass === emp.password) {
+      sessionStorage.setItem('att_loggedIn', 'true');
+      sessionStorage.setItem('att_role', 'employee');
+      sessionStorage.setItem('att_employeeId', emp.id);
+      
+      store.currentRole = 'employee';
+      store.currentEmployeeId = emp.id;
+      store.save();
+      
+      lastAuthorizedRole = 'employee';
+      lastAuthorizedEmployeeId = emp.id;
+      
+      roleSelect.value = 'employee';
+      empSelect.value = emp.id;
+      
+      showToast(`مرحباً بك ${emp.name}! تم تسجيل الدخول لبوابة العمل.`, "success");
+      playTone('success');
+      
+      loginPage.style.display = 'none';
+      document.getElementById('login-pass-emp').value = '';
+      
+      renderApp();
+    } else {
+      showToast("كلمة مرور الموظف غير صحيحة!", "danger");
+      playTone('danger');
+    }
+  });
+
+  // Admin Login Form Submit
+  document.getElementById('btn-submit-admin-login').addEventListener('click', () => {
+    const enteredPass = document.getElementById('login-pass-admin').value.trim();
+
+    if (enteredPass === '123456789') {
+      sessionStorage.setItem('att_loggedIn', 'true');
+      sessionStorage.setItem('att_role', 'admin');
+      
+      store.currentRole = 'admin';
+      store.save();
+      
+      lastAuthorizedRole = 'admin';
+      
+      roleSelect.value = 'admin';
+      
+      showToast("مرحباً بك يا مدير النظام في لوحة المراقبة.", "success");
+      playTone('success');
+      
+      loginPage.style.display = 'none';
+      document.getElementById('login-pass-admin').value = '';
+      
+      renderApp();
+    } else {
+      showToast("كلمة مرور المدير غير صحيحة!", "danger");
+      playTone('danger');
+    }
+  });
+
+  // Keypress events to trigger login on Enter key
+  document.getElementById('login-pass-emp').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      document.getElementById('btn-submit-emp-login').click();
+    }
+  });
+
+  document.getElementById('login-pass-admin').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      document.getElementById('btn-submit-admin-login').click();
+    }
+  });
+
+  // Global Logout Button
+  document.getElementById('btn-global-logout').addEventListener('click', () => {
+    sessionStorage.clear();
+    loginPage.style.display = 'flex';
+    populateLoginDropdown();
+    showToast("تم تسجيل الخروج بنجاح.", "info");
+    playTone('success');
   });
 
   // Start the timers

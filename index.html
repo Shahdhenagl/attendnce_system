@@ -52,6 +52,11 @@
             <button id="btn-jump-to-checkout" class="action-btn-sm warning" title="قفز لـ 5:00 مساءً">⏱️ 5:00 م</button>
           </div>
         </div>
+        
+        <!-- Logout Button -->
+        <button id="btn-global-logout" class="action-btn-sm warning" style="padding: 6px 12px; border-radius: 6px; font-weight: bold;" title="تسجيل الخروج للعودة لصفحة الدخول">
+          🚪 خروج
+        </button>
       </div>
     </div>
   </header>
@@ -330,6 +335,59 @@
       <div class="btn-group-row btn-full" style="width: 100%; gap: 8px; display: flex;">
         <button id="btn-login-submit" class="btn btn-primary flex-1">دخول</button>
         <button id="btn-login-cancel" class="btn btn-danger flex-1" style="background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3);">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- FULL SCREEN LOGIN PAGE OVERLAY -->
+  <!-- ============================================== -->
+  <div id="login-page" class="login-fullscreen-overlay">
+    <div class="login-card">
+      <div class="login-glow"></div>
+      
+      <div class="login-header" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px;">
+        <span class="login-logo-icon" style="font-size: 36px; animation: pulse 2s infinite;">🏢</span>
+        <h2 style="font-size: 18px; font-weight: 800; background: linear-gradient(135deg, var(--text-main) 30%, var(--secondary) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">نظام الحضور والرقابة الذكية عن بعد</h2>
+        <p style="font-size: 11px; color: var(--text-muted); line-height: 1.4;">المنصة الموحدة لتسجيل حضور الموظفين ومراقبة النشاط ريموتلي</p>
+      </div>
+
+      <!-- Login Tab Switcher -->
+      <div class="login-tabs" style="display: flex; background: rgba(0,0,0,0.25); border-radius: 10px; padding: 4px; width: 100%; margin-top: 10px;">
+        <button id="tab-btn-emp" class="login-tab-btn active" style="flex: 1; background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 8px; color: var(--text-main); padding: 10px; font-family: var(--font-arabic); font-size: 12px; font-weight: bold; cursor: pointer; transition: var(--transition);">💻 بوابة الموظف</button>
+        <button id="tab-btn-admin" class="login-tab-btn" style="flex: 1; background: transparent; border: none; border-radius: 8px; color: var(--text-secondary); padding: 10px; font-family: var(--font-arabic); font-size: 12px; font-weight: bold; cursor: pointer; transition: var(--transition);">👨‍💼 لوحة المدير</button>
+      </div>
+
+      <!-- Form 1: Employee Login -->
+      <div id="login-form-employee" class="login-form-content active-form" style="width: 100%; display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
+        <div class="form-group" style="width: 100%;">
+          <label for="login-select-emp" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; display: block;">اختر اسمك من القائمة:</label>
+          <select id="login-select-emp" class="form-select" style="font-size: 14px; padding: 10px; width: 100%;">
+            <!-- Dynamic employee list -->
+          </select>
+        </div>
+        <div class="form-group" style="width: 100%;">
+          <label for="login-pass-emp" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; display: block;">كلمة المرور الخاصة بك:</label>
+          <input type="password" id="login-pass-emp" placeholder="أدخل كلمة مرور الموظف" class="form-input" style="text-align: center; font-family: var(--font-english); direction: ltr; font-size: 15px; padding: 10px; width: 100%;">
+        </div>
+        <button id="btn-submit-emp-login" class="btn btn-primary btn-full" style="padding: 12px; font-size: 13px; font-weight: bold; margin-top: 6px;">
+          🚀 تسجيل الدخول وبدء العمل
+        </button>
+      </div>
+
+      <!-- Form 2: Admin Login -->
+      <div id="login-form-admin" class="login-form-content" style="width: 100%; display: none; flex-direction: column; gap: 12px; margin-top: 12px;">
+        <div class="form-group" style="width: 100%;">
+          <label for="login-pass-admin" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; display: block;">كلمة مرور لوحة الإدارة:</label>
+          <input type="password" id="login-pass-admin" placeholder="أدخل كلمة مرور المدير" class="form-input" style="text-align: center; font-family: var(--font-english); direction: ltr; font-size: 15px; padding: 10px; width: 100%;">
+        </div>
+        <button id="btn-submit-admin-login" class="btn btn-success btn-full" style="padding: 12px; font-size: 13px; font-weight: bold; margin-top: 6px;">
+          👨‍💼 دخول لوحة تحكم المدير
+        </button>
+      </div>
+
+      <div class="login-footer" style="margin-top: 16px; text-align: center; font-size: 10px; color: var(--text-muted);">
+        <p>نظام حضور وتأكيد نشاط تفاعلي - جميع الحقوق محفوظة © 2026</p>
       </div>
     </div>
   </div>
