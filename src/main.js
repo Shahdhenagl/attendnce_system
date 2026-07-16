@@ -259,6 +259,17 @@ function syncToGoogleSheets(action, employeeId, details, workedHours = 0, snooze
   const emp = store.employees.find(e => e.id === employeeId);
   const empName = emp ? emp.name : "غير معروف";
   const empEmail = emp ? emp.email : "";
+  const empSalary = emp ? (emp.salary || 0) : 0;
+  
+  let totalDiscount = 0;
+  if (emp) {
+    store.attendance.filter(a => a.employeeId === employeeId).forEach(log => {
+      totalDiscount += (parseFloat(log.lateDeductionAmount) || 0) + (parseFloat(log.snoozeDeductionAmount) || 0);
+    });
+  }
+  // Ensure we format it to 2 decimal places to avoid long floats
+  totalDiscount = parseFloat(totalDiscount.toFixed(2));
+  const finalSalary = parseFloat((empSalary - totalDiscount).toFixed(2));
 
   const payload = {
     employeeName: empName,
@@ -268,7 +279,10 @@ function syncToGoogleSheets(action, employeeId, details, workedHours = 0, snooze
     action: action, // "Check-in", "Check-out", "Missed-Check", "Absence", "Connection-Test"
     details: details,
     workedHours: workedHours,
-    snoozeHours: snoozeHours
+    snoozeHours: snoozeHours,
+    salary: empSalary,
+    totalDiscount: totalDiscount,
+    finalSalary: finalSalary
   };
 
   fetch(url, {
