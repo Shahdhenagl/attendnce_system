@@ -92,81 +92,8 @@ const playTone = (type) => {
 // ----------------------------------------------------
 // 2. Data Store & State Initialization
 // ----------------------------------------------------
-const DEFAULT_EMPLOYEES = [
-  {
-    id: "emp-1",
-    name: "شاهندة ناجي",
-    email: "shahd@company.com",
-    startHour: "09:00",
-    endHour: "17:00",
-    vacationBalance: 21,
-    vacationsUsed: 3,
-    role: "remote",
-    avatar: "شن",
-    password: "shahd123"
-  },
-  {
-    id: "emp-2",
-    name: "أحمد حسن",
-    email: "ahmed@company.com",
-    startHour: "09:00",
-    endHour: "17:00",
-    vacationBalance: 15,
-    vacationsUsed: 2,
-    role: "remote",
-    avatar: "أح",
-    password: "ahmed123"
-  },
-  {
-    id: "emp-3",
-    name: "نهى محمود",
-    email: "noha@company.com",
-    startHour: "10:00",
-    endHour: "18:00",
-    vacationBalance: 30,
-    vacationsUsed: 5,
-    role: "remote",
-    avatar: "نم",
-    password: "noha123"
-  }
-];
-
-const DEFAULT_ATTENDANCE = [
-  // Past records for a realistic feel
-  {
-    id: "att-old-1",
-    employeeId: "emp-1",
-    date: "2026-07-15",
-    checkInTime: "09:00",
-    checkOutTime: "17:00",
-    status: "Present",
-    workedHours: 8.0,
-    snoozeHours: 0.0,
-    isCheckedOut: true
-  },
-  {
-    id: "att-old-2",
-    employeeId: "emp-2",
-    date: "2026-07-15",
-    checkInTime: "09:15", // Late
-    checkOutTime: "17:00",
-    status: "Late",
-    workedHours: 7.75,
-    snoozeHours: 0.5, // 30 mins snooze
-    isCheckedOut: true
-  },
-  {
-    id: "att-old-3",
-    employeeId: "emp-3",
-    date: "2026-07-15",
-    checkInTime: "10:00",
-    checkOutTime: "18:00",
-    status: "Present",
-    workedHours: 8.0,
-    snoozeHours: 0.0,
-    isCheckedOut: true
-  }
-];
+const DEFAULT_EMPLOYEES = [];
+const DEFAULT_ATTENDANCE = [];
 
 class AppStore {
   constructor() {
@@ -174,6 +101,12 @@ class AppStore {
   }
 
   load() {
+    // Clear old seeded db for new clean slate
+    if (localStorage.getItem('att_db_seeded_v3') !== 'true') {
+      localStorage.clear();
+      localStorage.setItem('att_db_seeded_v3', 'true');
+    }
+
     this.employees = JSON.parse(localStorage.getItem('att_employees')) || DEFAULT_EMPLOYEES;
     // Ensure all employees have passwords (backward compatibility)
     this.employees.forEach(emp => {
@@ -383,10 +316,14 @@ function checkIn(employeeId) {
   let status = "Present";
   let lateMinutes = 0;
   
+  const hourlyRate = getHourlyRate(emp);
+  let lateDeductionAmount = 0.0;
+
   if (simDate > shiftStart) {
     status = "Late";
     lateMinutes = Math.floor((simDate - shiftStart) / 60000);
-    showToast(`لقد تأخرت في تسجيل الحضور بـ ${lateMinutes} دقيقة! تم تسجيل خصم تأخير.`, "warning");
+    lateDeductionAmount = parseFloat(((lateMinutes / 60) * hourlyRate).toFixed(2));
+    showToast(`لقد تأخرت في تسجيل الحضور بـ ${lateMinutes} دقيقة! خصم تأخير: ${lateDeductionAmount} ج.م.`, "warning");
   } else {
     showToast("تم تسجيل الحضور بنجاح في الموعد المحدد.", "success");
   }
@@ -403,6 +340,8 @@ function checkIn(employeeId) {
     workedHours: 0.0,
     snoozeHours: 0.0,
     lateMinutes: lateMinutes,
+    lateDeductionAmount: lateDeductionAmount,
+    snoozeDeductionAmount: 0.0,
     isCheckedOut: false
   };
 
@@ -575,9 +514,13 @@ function handlePresenceTimeout(employeeId) {
     
     if (snoozeHours > 0) {
       log.snoozeHours = parseFloat((log.snoozeHours + snoozeHours).toFixed(2));
-      showToast(`💤 لم يستجب الموظف ${emp.name} خلال 10 ثوانٍ! احتساب ${elapsedMinutes} دقيقة وقت غفوة وخصمها من الساعات.`, "danger");
+      const hourlyRate = getHourlyRate(emp);
+      const snoozeDeduction = parseFloat((snoozeHours * hourlyRate).toFixed(2));
+      log.snoozeDeductionAmount = parseFloat(((log.snoozeDeductionAmount || 0) + snoozeDeduction).toFixed(2));
+
+      showToast(`💤 لم يستجب الموظف ${emp.name} خلال 10 ثوانٍ! احتساب ${elapsedMinutes} دقيقة غفوة (خصم: ${snoozeDeduction} ج.م).`, "danger");
       playTone('danger');
-      syncToGoogleSheets("غفوة خصم (Missed Presence Check)", employeeId, `لم يستجب للفحص خلال 10 ثوانٍ (خصم: ${elapsedMinutes} د)`, 0, snoozeHours);
+      syncToGoogleSheets("غفوة خصم (Missed Presence Check)", employeeId, `غفوة خصم: ${snoozeDeduction} ج.م (خصم: ${elapsedMinutes} د)`, 0, snoozeHours);
     }
     
     // Update validation reference to the missed check time
@@ -649,6 +592,36 @@ function processAutoCheckOutCheck() {
 // 8. Admin Management Actions
 // ----------------------------------------------------
 
+function getHourlyRate(emp) {
+  const startParts = emp.startHour.split(':');
+  const endParts = emp.endHour.split(':');
+  const shiftHours = (parseInt(endParts[0]) + parseInt(endParts[1])/60) - (parseInt(startParts[0]) + parseInt(startParts[1])/60);
+  const salary = emp.salary || 6000;
+  const dailyRate = salary / 30; // 30 standard days per month
+  const hourlyRate = dailyRate / (shiftHours > 0 ? shiftHours : 8);
+  return parseFloat(hourlyRate.toFixed(2));
+}
+
+function showEditEmployeeModal(empId) {
+  const emp = store.employees.find(e => e.id === empId);
+  if (!emp) return;
+
+  document.getElementById('edit-emp-id').value = emp.id;
+  document.getElementById('edit-emp-name').value = emp.name;
+  document.getElementById('edit-emp-email').value = emp.email;
+  document.getElementById('edit-emp-start').value = emp.startHour;
+  document.getElementById('edit-emp-end').value = emp.endHour;
+  document.getElementById('edit-emp-salary').value = emp.salary || 6000;
+  document.getElementById('edit-emp-vacation').value = emp.vacationBalance;
+  document.getElementById('edit-emp-password').value = emp.password;
+
+  document.getElementById('edit-emp-popup-overlay').classList.remove('hidden');
+}
+
+function hideEditEmployeeModal() {
+  document.getElementById('edit-emp-popup-overlay').classList.add('hidden');
+}
+
 function populateLoginDropdown() {
   const select = document.getElementById('login-select-emp');
   if (!select) return;
@@ -661,7 +634,7 @@ function populateLoginDropdown() {
   });
 }
 
-function addEmployee(name, email, startHour, endHour, vacationBalance, password) {
+function addEmployee(name, email, startHour, endHour, vacationBalance, password, salary) {
   const newEmp = {
     id: "emp-" + Date.now(),
     name: name,
@@ -670,6 +643,7 @@ function addEmployee(name, email, startHour, endHour, vacationBalance, password)
     endHour: endHour,
     vacationBalance: parseInt(vacationBalance),
     vacationsUsed: 0,
+    salary: parseFloat(salary) || 6000,
     role: "remote",
     avatar: name.split(' ').map(n => n[0]).join('').substr(0, 2),
     password: password || "12345"
@@ -959,10 +933,21 @@ function renderEmployeeDashboard() {
       if (l.status === 'Paid Vacation') statusBadge = '<span class="log-status-badge vacation-paid">إجازة مدفوعة</span>';
       if (l.status === 'Unpaid Leave') statusBadge = '<span class="log-status-badge absence-unpaid">إجازة غير مدفوعة</span>';
       
+      const emp = store.employees.find(e => e.id === l.employeeId);
+      const lateDeduction = l.lateDeductionAmount || 0;
+      const snoozeDeduction = l.snoozeDeductionAmount || 0;
+      const totalDeductedVal = parseFloat((lateDeduction + snoozeDeduction).toFixed(2));
+      
       const checkInDisp = l.checkInTime || '--:--';
       const checkOutDisp = l.checkOutTime || '--:--';
       const workedDisp = l.isCheckedOut ? `${l.workedHours} س` : 'قيد العمل...';
-      const snoozeDisp = l.snoozeHours > 0 ? `-${l.snoozeHours} س خصم` : 'بدون خصومات';
+      
+      let snoozeDisp = l.snoozeHours > 0 ? `-${l.snoozeHours} س غفوة` : '';
+      let lateDisp = l.lateMinutes > 0 ? `تأخير ${l.lateMinutes} د` : '';
+      let penaltyDisp = [lateDisp, snoozeDisp].filter(Boolean).join(' | ');
+      if (penaltyDisp) penaltyDisp = ` (${penaltyDisp})`;
+      
+      const deductionDisp = totalDeductedVal > 0 ? `<span style="color: var(--danger); font-weight: bold;">خصم: -${totalDeductedVal} ج.م</span>` : '<span style="color: var(--success);">بدون خصومات</span>';
       
       item.innerHTML = `
         <div class="log-item-header">
@@ -971,7 +956,7 @@ function renderEmployeeDashboard() {
         </div>
         <div class="log-item-details">
           <span>دخول: ${checkInDisp} | خروج: ${checkOutDisp}</span>
-          <span class="log-net-hours">الصافي: ${workedDisp} (${snoozeDisp})</span>
+          <span class="log-net-hours">الصافي: ${workedDisp}${penaltyDisp} | ${deductionDisp}</span>
         </div>
       `;
       logsContainer.appendChild(item);
@@ -1079,13 +1064,15 @@ function renderAdminDashboard() {
     const balance = emp.vacationBalance - emp.vacationsUsed;
     const hasActiveCheck = store.activeChecks[emp.id] ? 'pulse-indicator online' : 'hidden';
     
+    const hourlyRate = getHourlyRate(emp);
     card.innerHTML = `
       <div class="admin-emp-card-header">
         <div class="admin-emp-meta">
           <div class="admin-emp-avatar">${emp.avatar}</div>
           <div class="admin-emp-name-box">
             <span class="admin-emp-name">${emp.name} <span class="${hasActiveCheck}" style="width:6px;height:6px;display:inline-block;" title="فحص معلق"></span></span>
-            <span class="admin-emp-shift">الدوام: ${emp.startHour} - ${emp.endHour} | إجازات متبقية: ${balance} يوم</span>
+            <span class="admin-emp-shift">الدوام: ${emp.startHour} - ${emp.endHour} | الراتب: ${emp.salary || 6000} ج.م (الساعة: ${hourlyRate} ج.م)</span>
+            <span class="admin-emp-shift" style="margin-top: 2px; color: var(--text-muted);">إجازات متبقية: ${balance} يوم</span>
           </div>
         </div>
         <span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-secondary);">${statusText}</span>
@@ -1096,10 +1083,13 @@ function renderAdminDashboard() {
           🚨 فحص نشاط
         </button>
         <button class="btn btn-warning btn-xs btn-absence-emp" data-id="${emp.id}" title="تسجيل غياب أو إجازة للموظف">
-          📅 تسجيل غياب/إجازة
+          📅 غياب
         </button>
         <button class="btn btn-success btn-xs btn-vacation-emp" data-id="${emp.id}" data-balance="${emp.vacationBalance}" title="تعديل رصيد الإجازات السنوي">
-          ⚙️ الإجازات (${emp.vacationBalance})
+          🌴 الإجازات (${emp.vacationBalance})
+        </button>
+        <button class="btn btn-primary btn-xs btn-edit-emp" data-id="${emp.id}" style="background: rgba(124, 58, 237, 0.15); color: var(--primary); border: 1px solid rgba(124, 58, 237, 0.3);" title="تعديل كافة بيانات الموظف وراتبه وساعاته">
+          ✏️ تعديل الموظف
         </button>
       </div>
     `;
@@ -1141,8 +1131,8 @@ function renderAdminDashboard() {
           ${statusBadge}
         </div>
         <div class="log-item-details">
-          <span>دخول: ${l.checkInTime} | خروج: ${l.checkOutTime || 'قيد العمل'}</span>
-          <span class="log-net-hours">الصافي: ${l.workedHours} س (غفوات: ${l.snoozeHours} س)</span>
+          <span>دخول: ${l.checkInTime || '--:--'} | خروج: ${l.checkOutTime || 'قيد العمل'}</span>
+          <span class="log-net-hours">الصافي: ${l.workedHours} س (تأخير: ${l.lateMinutes || 0} د | غفوات: ${l.snoozeHours} س) | ${parseFloat(((l.lateDeductionAmount || 0) + (l.snoozeDeductionAmount || 0)).toFixed(2)) > 0 ? `<span style="color: var(--danger); font-weight: bold;">خصم: -${parseFloat(((l.lateDeductionAmount || 0) + (l.snoozeDeductionAmount || 0)).toFixed(2))} ج.م</span>` : '<span style="color: var(--success);">بدون خصومات</span>'}</span>
         </div>
       `;
       logsListContainer.appendChild(item);
@@ -1409,13 +1399,64 @@ document.addEventListener('DOMContentLoaded', () => {
     const start = document.getElementById('new-emp-start').value;
     const end = document.getElementById('new-emp-end').value;
     const vacation = document.getElementById('new-emp-vacation').value;
+    const salary = document.getElementById('new-emp-salary').value;
     const password = document.getElementById('new-emp-password').value;
     
-    addEmployee(name, email, start, end, vacation, password);
+    addEmployee(name, email, start, end, vacation, password, salary);
     
     // Reset form & go back to employees tab
     e.target.reset();
     document.querySelector('.admin-tab-btn[data-target="admin-panel-employees"]').click();
+  });
+
+  // Edit employee form submit listener
+  document.getElementById('edit-employee-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = document.getElementById('edit-emp-id').value;
+    const name = document.getElementById('edit-emp-name').value;
+    const email = document.getElementById('edit-emp-email').value;
+    const start = document.getElementById('edit-emp-start').value;
+    const end = document.getElementById('edit-emp-end').value;
+    const salary = document.getElementById('edit-emp-salary').value;
+    const vacation = document.getElementById('edit-emp-vacation').value;
+    const password = document.getElementById('edit-emp-password').value;
+
+    const emp = store.employees.find(e => e.id === id);
+    if (emp) {
+      emp.name = name;
+      emp.email = email;
+      emp.startHour = start;
+      emp.endHour = end;
+      emp.salary = parseFloat(salary) || 6000;
+      emp.vacationBalance = parseInt(vacation);
+      emp.password = password;
+      emp.avatar = name.split(' ').map(n => n[0]).join('').substr(0, 2);
+
+      store.save();
+      showToast(`تم تحديث بيانات الموظف ${name} بنجاح.`, "success");
+      playTone('success');
+      hideEditEmployeeModal();
+      populateLoginDropdown();
+      renderApp();
+    }
+  });
+
+  document.getElementById('btn-edit-emp-cancel').addEventListener('click', () => {
+    hideEditEmployeeModal();
+  });
+
+  // Reset database button
+  document.getElementById('btn-reset-db-now').addEventListener('click', () => {
+    if (confirm("🚨 هل أنت متأكد تماماً أنك تريد إعادة تعيين النظام بالكامل؟ سيتم مسح جميع الموظفين وسجلات الحضور نهائياً!")) {
+      localStorage.clear();
+      sessionStorage.clear();
+      localStorage.setItem('att_db_seeded_v3', 'true');
+      showToast("تم تصفير النظام وإعادة التعيين بالكامل.", "success");
+      playTone('success');
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    }
   });
 
   // Delegate clicks on dynamic employee lists in Admin view
@@ -1439,6 +1480,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (val !== null && val !== "") {
         updateVacationBalance(empId, val);
       }
+    } else if (target.classList.contains('btn-edit-emp')) {
+      // Edit employee
+      showEditEmployeeModal(empId);
     }
   });
 

@@ -225,6 +225,15 @@
               <button id="btn-save-sheets-url" class="btn btn-success btn-full">💾 حفظ وإجراء فحص اتصال</button>
             </div>
 
+            <!-- System Settings & Reset Card -->
+            <div class="card config-card" style="margin-top: 12px; border-color: rgba(239, 68, 68, 0.25);">
+              <h3 class="text-danger">⚙️ إعدادات النظام المتقدمة</h3>
+              <p class="card-desc">تنبيه: سيؤدي تصفير النظام إلى حذف جميع الموظفين وسجلات الحضور والغياب بشكل نهائي لبدء قاعدة بيانات جديدة ونظيفة.</p>
+              <button id="btn-reset-db-now" class="btn btn-danger btn-full" style="background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); font-weight: bold;">
+                ⚠️ إعادة تعيين وتصفير قاعدة البيانات بالكامل
+              </button>
+            </div>
+
 
             <!-- Tab Switcher inside Admin -->
             <div class="admin-tabs">
@@ -272,9 +281,15 @@
                     <input type="time" id="new-emp-end" value="17:00" required class="form-input">
                   </div>
                 </div>
-                <div class="form-group">
-                  <label for="new-emp-vacation">رصيد الإجازات السنوي (مدفوع الأجر) *</label>
-                  <input type="number" id="new-emp-vacation" value="21" min="0" required class="form-input">
+                <div class="form-row">
+                  <div class="form-group flex-1">
+                    <label for="new-emp-vacation">رصيد الإجازات السنوي *</label>
+                    <input type="number" id="new-emp-vacation" value="21" min="0" required class="form-input">
+                  </div>
+                  <div class="form-group flex-1">
+                    <label for="new-emp-salary">الراتب الشهري (ج.م) *</label>
+                    <input type="number" id="new-emp-salary" value="6000" min="0" required class="form-input">
+                  </div>
                 </div>
                 <div class="form-group">
                   <label for="new-emp-password">كلمة المرور الخاصة بالموظف (لتسجيل دخوله) *</label>
@@ -341,6 +356,58 @@
         <button id="btn-login-submit" class="btn btn-primary flex-1">دخول</button>
         <button id="btn-login-cancel" class="btn btn-danger flex-1" style="background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3);">إلغاء</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- EDIT EMPLOYEE OVERLAY -->
+  <!-- ============================================== -->
+  <div id="edit-emp-popup-overlay" class="presence-overlay hidden">
+    <div class="popup-modal" style="max-width: 360px; border-color: var(--primary-glow); gap: 12px; text-align: right; align-items: stretch;">
+      <div class="popup-glow"></div>
+      <div class="popup-header" style="text-align: center;">
+        <h2 style="font-size: 15px; font-weight: 800;">✏️ تعديل بيانات الموظف</h2>
+        <p style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">قم بتحديث معلومات الموظف الحالية</p>
+      </div>
+      <form id="edit-employee-form" class="card-form" style="display: flex; flex-direction: column; gap: 8px;">
+        <input type="hidden" id="edit-emp-id">
+        <div class="form-group">
+          <label for="edit-emp-name" style="font-size: 11px; color: var(--text-secondary);">الاسم بالكامل *</label>
+          <input type="text" id="edit-emp-name" required class="form-input" style="padding: 8px;">
+        </div>
+        <div class="form-group">
+          <label for="edit-emp-email" style="font-size: 11px; color: var(--text-secondary);">البريد الإلكتروني *</label>
+          <input type="email" id="edit-emp-email" required class="form-input" style="padding: 8px;">
+        </div>
+        <div class="form-row" style="display: flex; gap: 8px;">
+          <div class="form-group flex-1">
+            <label for="edit-emp-start" style="font-size: 11px; color: var(--text-secondary);">بداية الدوام *</label>
+            <input type="time" id="edit-emp-start" required class="form-input" style="padding: 8px;">
+          </div>
+          <div class="form-group flex-1">
+            <label for="edit-emp-end" style="font-size: 11px; color: var(--text-secondary);">نهاية الدوام *</label>
+            <input type="time" id="edit-emp-end" required class="form-input" style="padding: 8px;">
+          </div>
+        </div>
+        <div class="form-row" style="display: flex; gap: 8px;">
+          <div class="form-group flex-1">
+            <label for="edit-emp-salary" style="font-size: 11px; color: var(--text-secondary);">الراتب الشهري *</label>
+            <input type="number" id="edit-emp-salary" min="0" required class="form-input" style="padding: 8px;">
+          </div>
+          <div class="form-group flex-1">
+            <label for="edit-emp-vacation" style="font-size: 11px; color: var(--text-secondary);">رصيد الإجازات *</label>
+            <input type="number" id="edit-emp-vacation" min="0" required class="form-input" style="padding: 8px;">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="edit-emp-password" style="font-size: 11px; color: var(--text-secondary);">كلمة المرور *</label>
+          <input type="password" id="edit-emp-password" required class="form-input" style="font-family: var(--font-english); direction: ltr; padding: 8px;">
+        </div>
+        <div class="btn-group-row" style="margin-top: 8px; display: flex; gap: 8px;">
+          <button type="submit" class="btn btn-success flex-1" style="font-size: 12px; font-weight: bold; padding: 10px;">💾 حفظ التعديلات</button>
+          <button type="button" id="btn-edit-emp-cancel" class="btn btn-danger flex-1" style="background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); font-size: 12px; font-weight: bold; padding: 10px;">إلغاء</button>
+        </div>
+      </form>
     </div>
   </div>
 
