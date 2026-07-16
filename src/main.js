@@ -247,7 +247,10 @@ function showToast(message, type = 'success') {
   container.appendChild(toast);
   
   setTimeout(() => {
-    toast.remove();
+    toast.style.animation = 'toastOut 0.3s forwards';
+    setTimeout(() => {
+      toast.remove();
+    }, 300);
   }, 5000);
 }
 
