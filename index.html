@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام الحضور والرقابة عن بعد | Remote Attendance & Presence System</title>
+  <!-- Google Fonts: Outfit & Cairo -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+
+  <!-- Top Simulator Control Deck (Sticky Navbar) -->
+  <header class="simulator-deck">
+    <div class="deck-container">
+      <div class="deck-brand">
+        <span class="logo-dot"></span>
+        <h2>لوحة محاكاة النظام (Simulator)</h2>
+      </div>
+      
+      <div class="deck-controls">
+        <!-- Role Toggle -->
+        <div class="control-group">
+          <label for="role-select">الدور الحالي:</label>
+          <select id="role-select" class="deck-select">
+            <option value="admin">👨‍💼 مدير النظام (Admin)</option>
+            <option value="employee">💻 موظف (Employee)</option>
+          </select>
+        </div>
+
+        <!-- Employee Selection (visible when role is employee) -->
+        <div id="employee-selector-group" class="control-group hidden">
+          <label for="active-employee-select">اختر الموظف:</label>
+          <select id="active-employee-select" class="deck-select">
+            <!-- Dynamic list of employees -->
+          </select>
+        </div>
+
+        <!-- Simulated Time Panel -->
+        <div class="time-simulator-panel">
+          <div class="sim-time-display">
+            <span id="sim-date">2026-07-16</span>
+            <span id="sim-clock" class="digital-glow">13:00:00</span>
+          </div>
+          <div class="sim-speed-controls">
+            <button id="btn-speed-normal" class="speed-btn active" title="وقت طبيعي">1x</button>
+            <button id="btn-speed-fast" class="speed-btn" title="سريع جداً (1 ثانية = 1 دقيقة)">60x</button>
+            <button id="btn-speed-warp" class="speed-btn" title="فائق السرعة (1 ثانية = 5 دقائق)">300x</button>
+            <button id="btn-jump-10m" class="action-btn-sm" title="قفز 10 دقائق">+10 د</button>
+            <button id="btn-jump-to-checkout" class="action-btn-sm warning" title="قفز لـ 5:00 مساءً">⏱️ 5:00 م</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main View Container -->
+  <main class="app-viewport">
+    
+    <!-- Phone Mockup Container (Mobile View simulator) -->
+    <div class="phone-frame">
+      <div class="phone-notch"></div>
+      <div class="phone-screen">
+        
+        <!-- Phone OS Top Bar -->
+        <div class="phone-os-bar">
+          <span class="phone-time" id="phone-os-time">13:00</span>
+          <div class="phone-icons">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c3.9 3.89 10.23 3.89 14.12 0l1.72-1.72C21.26 16.07 22 14.12 22 12c0-4.97-4.03-9-9-9zm0 15c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/></svg>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+            <span class="battery">100% 🔋</span>
+          </div>
+        </div>
+
+        <!-- Phone Dynamic App Header -->
+        <div class="app-header">
+          <div class="app-info">
+            <span class="badge" id="app-role-badge">الموظف</span>
+            <h1 id="app-title">بوابة الحضور الذكي</h1>
+          </div>
+          <div class="user-avatar-small" id="header-avatar">
+            SA
+          </div>
+        </div>
+
+        <!-- Inner Content Area -->
+        <div class="screen-content" id="screen-content-area">
+
+          <!-- ============================================== -->
+          <!-- EMPLOYEE VIEW -->
+          <!-- ============================================== -->
+          <div id="view-employee" class="app-view hidden">
+            <!-- Live Status Alert Card -->
+            <div class="status-alert-card" id="emp-status-card">
+              <div class="status-info">
+                <span class="pulse-indicator offline" id="emp-pulse"></span>
+                <span class="status-label" id="emp-status-text">غير مسجل حضور</span>
+              </div>
+              <div class="shift-times" id="emp-shift-text">الدوام: --:-- إلى --:--</div>
+            </div>
+
+            <!-- Dashboard Stats Grid -->
+            <div class="stats-grid">
+              <div class="stat-box">
+                <span class="stat-icon">🕒</span>
+                <span class="stat-value" id="emp-stat-required">--</span>
+                <span class="stat-title">ساعات الدوام</span>
+              </div>
+              <div class="stat-box">
+                <span class="stat-icon text-success">⏱️</span>
+                <span class="stat-value" id="emp-stat-worked">0.0 س</span>
+                <span class="stat-title">ساعات العمل</span>
+              </div>
+              <div class="stat-box warning-box" id="emp-snooze-box">
+                <span class="stat-icon text-warning">💤</span>
+                <span class="stat-value" id="emp-stat-snooze">0.0 س</span>
+                <span class="stat-title">وقت الغفوة / الخصم</span>
+              </div>
+              <div class="stat-box highlight-box">
+                <span class="stat-icon text-primary">💼</span>
+                <span class="stat-value" id="emp-stat-net">0.0 س</span>
+                <span class="stat-title">صافي الساعات</span>
+              </div>
+            </div>
+
+            <!-- Check-In/Check-Out Button Section -->
+            <div class="check-actions-section">
+              <div class="radial-button-container">
+                <button id="btn-check-action" class="check-btn checkout-state">
+                  <div class="btn-ripple"></div>
+                  <span class="btn-text">تسجيل حضور</span>
+                  <span class="btn-subtext" id="check-btn-time">--:--</span>
+                </button>
+              </div>
+              <p class="section-hint" id="emp-check-hint">اضغط لتسجيل الحضور وبدء احتساب ساعات العمل</p>
+            </div>
+
+            <!-- Vacation Balance Card -->
+            <div class="card vacation-balance-card">
+              <div class="card-header">
+                <h3>⚖️ رصيد الإجازات المدفوعة</h3>
+                <span class="vacation-days-count" id="emp-vacation-balance">-- / -- يوم</span>
+              </div>
+              <div class="vacation-progress-bar">
+                <div class="vacation-progress-fill" id="emp-vacation-fill" style="width: 0%;"></div>
+              </div>
+              <p class="vacation-footer-note">الإجازات المسجلة تحسب مدفوعة الأجر كاملة وتضاف للمرتب.</p>
+            </div>
+
+            <!-- Attendance History List -->
+            <div class="logs-section">
+              <div class="section-title-bar">
+                <h3>📅 سجل الحضور والغياب</h3>
+              </div>
+              <div class="logs-list" id="emp-logs-list">
+                <!-- Dynamically generated logs -->
+                <div class="empty-state">لا يوجد سجل حضور اليوم. سجل حضورك الآن.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============================================== -->
+          <!-- ADMIN VIEW -->
+          <!-- ============================================== -->
+          <div id="view-admin" class="app-view hidden">
+            
+            <!-- Admin Stats Summary Dashboard -->
+            <div class="admin-stats-summary">
+              <div class="admin-stat-card">
+                <span class="val" id="admin-count-total">0</span>
+                <span class="lbl">الموظفين</span>
+              </div>
+              <div class="admin-stat-card success">
+                <span class="val" id="admin-count-present">0</span>
+                <span class="lbl">حاضرين</span>
+              </div>
+              <div class="admin-stat-card warning">
+                <span class="val" id="admin-count-late">0</span>
+                <span class="lbl">متأخرين</span>
+              </div>
+              <div class="admin-stat-card danger">
+                <span class="val" id="admin-count-snoozed">0</span>
+                <span class="lbl">غفوات خصم</span>
+              </div>
+            </div>
+
+            <!-- Realtime Rounds Config Card -->
+            <div class="card config-card">
+              <h3>🚨 مراقبة وطلب إثبات الحضور (Rounds)</h3>
+              <p class="card-desc">يقوم النظام بإرسال إشعارات عشوائية للموظفين لإثبات وجودهم. إن لم يستجيبوا خلال 10 ثوانٍ، تُخصم الفترة كغفوة.</p>
+              
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label for="admin-round-interval">فترة الفحص الدورية:</label>
+                  <select id="admin-round-interval" class="form-select">
+                    <option value="10">كل 10 دقائق (تجريبي سريع)</option>
+                    <option value="20">كل 20 دقيقة</option>
+                    <option value="30">كل 30 دقيقة</option>
+                    <option value="50">كل 50 دقيقة</option>
+                    <option value="random" selected>فترات عشوائية (10 إلى 50 دقيقة)</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="round-status-box">
+                <span class="round-indicator-label">الحالة:</span>
+                <span class="round-status-value" id="admin-round-status">بانتظار الفحص القادم...</span>
+              </div>
+
+              <div class="btn-group-row">
+                <button id="btn-trigger-round-now" class="btn btn-primary btn-full">
+                  ⚡ إرسال فحص عشوائي الآن لجميع النشطين
+                </button>
+              </div>
+            </div>
+
+            <!-- Tab Switcher inside Admin -->
+            <div class="admin-tabs">
+              <button class="admin-tab-btn active" data-target="admin-panel-employees">👥 الموظفين</button>
+              <button class="admin-tab-btn" data-target="admin-panel-logs">📜 السجلات اليومية</button>
+              <button class="admin-tab-btn" data-target="admin-panel-new">➕ إضافة موظف</button>
+            </div>
+
+            <!-- TAB 1: Employees List -->
+            <div id="admin-panel-employees" class="admin-tab-content active-content">
+              <div class="employee-list-grid" id="admin-employee-grid">
+                <!-- Dynamically rendered employee list -->
+              </div>
+            </div>
+
+            <!-- TAB 2: History Logs -->
+            <div id="admin-panel-logs" class="admin-tab-content">
+              <div class="logs-filter-row">
+                <label for="admin-log-filter-date">التاريخ:</label>
+                <input type="date" id="admin-log-filter-date" class="form-input">
+              </div>
+              <div class="admin-logs-list" id="admin-logs-list-container">
+                <!-- Admin view of all employee logs -->
+              </div>
+            </div>
+
+            <!-- TAB 3: Add Employee Form -->
+            <div id="admin-panel-new" class="admin-tab-content">
+              <form id="add-employee-form" class="card-form">
+                <div class="form-group">
+                  <label for="new-emp-name">الاسم بالكامل *</label>
+                  <input type="text" id="new-emp-name" placeholder="مثال: أحمد محمد علي" required class="form-input">
+                </div>
+                <div class="form-group">
+                  <label for="new-emp-email">البريد الإلكتروني *</label>
+                  <input type="email" id="new-emp-email" placeholder="name@company.com" required class="form-input">
+                </div>
+                <div class="form-row">
+                  <div class="form-group flex-1">
+                    <label for="new-emp-start">بداية الدوام *</label>
+                    <input type="time" id="new-emp-start" value="09:00" required class="form-input">
+                  </div>
+                  <div class="form-group flex-1">
+                    <label for="new-emp-end">نهاية الدوام (إغلاق تلقائي) *</label>
+                    <input type="time" id="new-emp-end" value="17:00" required class="form-input">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="new-emp-vacation">رصيد الإجازات السنوي (مدفوع الأجر) *</label>
+                  <input type="number" id="new-emp-vacation" value="21" min="0" required class="form-input">
+                </div>
+                <button type="submit" class="btn btn-success btn-full">💾 إضافة الموظف وتفعيل الدوام ريموتلي</button>
+              </form>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- PRESENCE CHECK POPUP OVERLAY -->
+    <!-- ============================================== -->
+    <div id="presence-popup-overlay" class="presence-overlay hidden">
+      <div class="popup-modal">
+        <div class="popup-glow"></div>
+        <div class="popup-header">
+          <div class="alert-icon">⚠️</div>
+          <h2>فحص التواجد والنشاط ريموتلي!</h2>
+          <p>يرجى إثبات أنك تعمل حالياً وعدم الابتعاد عن الشاشة.</p>
+        </div>
+        
+        <!-- Circle Progress Countdown -->
+        <div class="countdown-container">
+          <svg class="countdown-svg" viewBox="0 0 100 100">
+            <circle class="countdown-bg" cx="50" cy="50" r="45"></circle>
+            <circle class="countdown-bar" cx="50" cy="50" r="45" id="countdown-circle"></circle>
+          </svg>
+          <div class="countdown-text" id="countdown-seconds">10.0</div>
+        </div>
+
+        <div class="popup-actions">
+          <button id="btn-presence-confirm" class="btn btn-confirm-presence">
+            ✋ نعم، أنا أعمل الآن (إثبات حضور)
+          </button>
+        </div>
+        <div class="popup-footer">
+          <p>متبقي <strong id="countdown-text-secs">10</strong> ثوانٍ للاختفاء وتطبيق خصم الغفوة.</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Audio elements placeholders created dynamically via Web Audio API -->
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
